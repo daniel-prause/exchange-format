@@ -50,3 +50,15 @@ impl Default for Text {
         }
     }
 }
+
+pub trait Exchangeable {
+    type Output;
+    fn serialize(&self) -> String;
+}
+
+impl Exchangeable for ExchangeFormat {
+    type Output = Self;
+    fn serialize(&self) -> String {
+        serde_json::json!(self).to_string()
+    }
+}
