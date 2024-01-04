@@ -1,3 +1,5 @@
+use std::{collections::HashMap, ffi::CString};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -9,6 +11,19 @@ pub struct ExchangeFormat {
 pub enum Item {
     Text(Text),
     Image(Image),
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub enum ConfigParam {
+    Integer(u32),
+    String(String),
+    Float(f32),
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ExchangeableConfig {
+    // format: "param_key" -> (Label, ConfigParam)
+    pub params: HashMap<String, ConfigParam>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -37,6 +52,14 @@ impl Default for ExchangeFormat {
     }
 }
 
+impl Default for ExchangeableConfig {
+    fn default() -> ExchangeableConfig {
+        ExchangeableConfig {
+            params: HashMap::new(),
+        }
+    }
+}
+
 impl Default for Text {
     fn default() -> Text {
         Text {
@@ -61,4 +84,19 @@ impl Exchangeable for ExchangeFormat {
     fn serialize(&self) -> String {
         serde_json::json!(self).to_string()
     }
+}
+
+impl Exchangeable for ExchangeableConfig {
+    type Output = Self;
+    fn serialize(&self) -> String {
+        serde_json::json!(self).to_string()
+    }
+}
+
+pub fn deserialize_config_from_string(data: String) -> ExchangeableConfig {
+    serde_json::from_str(data.as_str()).unwrap_or_default()
+}
+
+pub fn deserialize_config_from_cstring(data: CString) -> ExchangeableConfig {
+    serde_json::from_str(&data.to_str().unwrap_or_default()).unwrap_or_default()
 }
