@@ -1,7 +1,6 @@
-use std::{collections::HashMap, ffi::CString};
-
+use indexmap::{map::serde_seq, IndexMap};
 use serde::{Deserialize, Serialize};
-
+use std::ffi::CString;
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ExchangeFormat {
     pub items: Vec<Item>,
@@ -18,12 +17,14 @@ pub enum ConfigParam {
     Integer(u32),
     String(String),
     Float(f32),
+    Password(String),
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExchangeableConfig {
     // format: "param_key" -> (Label, ConfigParam)
-    pub params: HashMap<String, ConfigParam>,
+    #[serde(with = "serde_seq")]
+    pub params: IndexMap<String, ConfigParam>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -55,7 +56,7 @@ impl Default for ExchangeFormat {
 impl Default for ExchangeableConfig {
     fn default() -> ExchangeableConfig {
         ExchangeableConfig {
-            params: HashMap::new(),
+            params: IndexMap::new(),
         }
     }
 }
@@ -93,10 +94,27 @@ impl Exchangeable for ExchangeableConfig {
     }
 }
 
-pub fn deserialize_config_from_string(data: String) -> ExchangeableConfig {
-    serde_json::from_str(data.as_str()).unwrap_or_default()
+impl ExchangeableConfig {
+    pub fn add(&mut self, key: String, config_param: ConfigParam) {
+        self.params.insert(key, config_param);
+    }
+
+    pub fn get(&self, key: String) -> Option<ConfigParam> {
+        match self.params.get(&key) {
+            Some(config_param) => Some(config_param.clone()),
+            None => None,
+        }
+    }
 }
 
-pub fn deserialize_config_from_cstring(data: CString) -> ExchangeableConfig {
-    serde_json::from_str(&data.to_str().unwrap_or_default()).unwrap_or_default()
+impl From<CString> for ExchangeableConfig {
+    fn from(value: CString) -> Self {
+        serde_json::from_str(&value.to_str().unwrap_or_default()).unwrap_or_default()
+    }
+}
+
+impl From<String> for ExchangeableConfig {
+    fn from(value: String) -> Self {
+        serde_json::from_str(&value).unwrap_or_default()
+    }
 }
