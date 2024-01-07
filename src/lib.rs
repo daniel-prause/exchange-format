@@ -1,6 +1,29 @@
-use indexmap::{map::serde_seq, IndexMap};
+use indexmap::{
+    map::serde_seq::{self},
+    IndexMap,
+};
+use lazy_static::*;
 use serde::{Deserialize, Serialize};
-use std::ffi::CString;
+use std::ffi::{c_char, CString};
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref CURRENT_CONFIG: Mutex<ExchangeableConfig> =
+        Mutex::new(ExchangeableConfig::default());
+}
+
+pub fn get_current_config() -> ExchangeableConfig {
+    CURRENT_CONFIG.lock().unwrap().clone()
+}
+
+#[no_mangle]
+pub extern "C" fn set_current_config(serialized_config: *mut i8) {
+    unsafe {
+        let config = ExchangeableConfig::from(CString::from_raw(serialized_config));
+        *CURRENT_CONFIG.lock().unwrap() = config;
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ExchangeFormat {
     pub items: Vec<Item>,
@@ -78,6 +101,11 @@ impl Default for Text {
 pub trait Exchangeable {
     type Output;
     fn serialize(&self) -> String;
+    fn to_raw(&self) -> *mut c_char {
+        CString::new(Exchangeable::serialize(self))
+            .unwrap()
+            .into_raw()
+    }
 }
 
 impl Exchangeable for ExchangeFormat {
@@ -116,5 +144,33 @@ impl From<CString> for ExchangeableConfig {
 impl From<String> for ExchangeableConfig {
     fn from(value: String) -> Self {
         serde_json::from_str(&value).unwrap_or_default()
+    }
+}
+
+impl Into<u32> for ConfigParam {
+    fn into(self) -> u32 {
+        match self {
+            ConfigParam::Integer(value) => value,
+            _ => panic!("Cannot convert {:?} into u32", self),
+        }
+    }
+}
+
+impl Into<String> for ConfigParam {
+    fn into(self) -> String {
+        match self {
+            ConfigParam::String(value) => value,
+            ConfigParam::Password(value) => value,
+            _ => panic!("Cannot convert {:?} into String", self),
+        }
+    }
+}
+
+impl Into<f32> for ConfigParam {
+    fn into(self) -> f32 {
+        match self {
+            ConfigParam::Float(value) => value,
+            _ => panic!("Cannot convert {:?} into f32", self),
+        }
     }
 }
