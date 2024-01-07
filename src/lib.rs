@@ -122,6 +122,12 @@ impl Exchangeable for ExchangeableConfig {
     }
 }
 
+impl ExchangeFormat {
+    pub fn new(items: Vec<Item>) -> ExchangeFormat {
+        ExchangeFormat { items }
+    }
+}
+
 impl ExchangeableConfig {
     pub fn add(&mut self, key: String, config_param: ConfigParam) {
         self.params.insert(key, config_param);
