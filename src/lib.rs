@@ -19,8 +19,8 @@ pub fn get_current_config() -> ExchangeableConfig {
 #[no_mangle]
 pub extern "C" fn set_current_config(serialized_config: *mut i8) {
     unsafe {
-        let config = ExchangeableConfig::from(CString::from_raw(serialized_config));
-        *CURRENT_CONFIG.lock().unwrap() = config;
+        *CURRENT_CONFIG.lock().unwrap() =
+            ExchangeableConfig::from(CString::from_raw(serialized_config));
     }
 }
 
